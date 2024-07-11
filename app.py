@@ -58,15 +58,62 @@ def handle_message(senderId, message):
         if "#" in message:
             context["name"], context["room_number"] = message.split("#")
             context["state"] = "checked_in"
-            return (f"We see it's your first time staying with us, {context['name'].strip()}. Welcome again! "
-                    "You are now checked in online and can enjoy our app services and hotel amenities. "
-                    "Guests are welcome to enjoy the pool, café, and gym. For entertainment, we have a bar & restaurant on the 16th floor. "
-                    "For Room Service, you can press 1 for the menu and order here. "
-                    "For Room Amenities, you can press 2. "
-                    "For Fixes and Repairs, you can press 3. "
-                    "Enjoy your stay! And don't forget to rate our services for a better experience!")
+            return (
+                f"We see it's your first time staying with us, {context['name'].strip()}. Welcome again!\n\n"
+                "You are now checked in online and can enjoy our app services and hotel amenities.\n\n"
+                "Guests are welcome to enjoy the pool, café, and gym. For entertainment, we have a bar & restaurant on the 16th floor.\n\n"
+                "For Room Service, you can press 1 for the menu and order here.\n"
+                "For Room Amenities, you can press 2.\n"
+                "For Fixes and Repairs, you can press 3.\n\n"
+                "Enjoy your stay! And don't forget to rate our services for a better experience!"
+            )
         else:
             return "Please provide your full name and room number in the format: Your Name #RoomNumber"
+
+    elif context["state"] == "checked_in":
+        if message == "1":
+            context["state"] = "ordering_food"
+            return (
+                "The Curve Kitchen Menu:\n"
+                "1. Fried Fish - KSH 2,000 (Served with Ugali)\n"
+                "2. English Breakfast - KSH 1,000 (Extras available)\n"
+                "3. Pancakes - KSH 500 (served with fruits and syrup)\n\n"
+                "Please type your order."
+            )
+        elif message == "2":
+            context["state"] = "requesting_amenities"
+            return (
+                "Our complimentary room amenities include:\n"
+                "Blow dryer, towels, soap, bottled water, toilet paper.\n\n"
+                "Please state the extra items required and our team will be happy to deliver!"
+            )
+        elif message == "3":
+            context["state"] = "reporting_issues"
+            return "Please describe the issue you are experiencing."
+        else:
+            return "Invalid option. Please press 1 for Room Service, 2 for Room Amenities, or 3 for Fixes and Repairs."
+
+    elif context["state"] == "ordering_food":
+        context["order"] = message
+        context["state"] = "confirming_food_order"
+        return "Would you like anything to drink? Please type 'Yes' or 'No'."
+
+    elif context["state"] == "confirming_food_order":
+        if message.lower() == "no":
+            context["state"] = "food_order_confirmed"
+            return "Your order is now being processed."
+        else:
+            return "Please type 'No' if you don't want any drink."
+
+    elif context["state"] == "requesting_amenities":
+        context["amenities_request"] = message
+        context["state"] = "amenities_requested"
+        return "Your request for extra amenities is being processed."
+
+    elif context["state"] == "reporting_issues":
+        context["issue"] = message
+        context["state"] = "issue_reported"
+        return "Your issue has been reported and our team will address it shortly."
 
     return "Something went wrong. Please try again."
 
