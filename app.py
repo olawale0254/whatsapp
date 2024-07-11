@@ -1,7 +1,9 @@
 import os
+import threading
 from flask import Flask, request, jsonify
 from helperfunction.waSendMessage import sendMessage
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 
 # Load environment variables
 load_dotenv()
@@ -10,6 +12,7 @@ app = Flask(__name__)
 
 # Initialize context storage
 session_context = {}
+timeout_threads = {}
 
 @app.route('/')
 def index():
@@ -23,11 +26,20 @@ def whatsapp():
 
         # Check if there's an existing context for the user
         if senderId not in session_context:
-            session_context[senderId] = {"state": "initial"}
+            session_context[senderId] = {"state": "initial", "last_active": datetime.now()}
+
+        # Reset the timeout timer
+        if senderId in timeout_threads:
+            timeout_threads[senderId].cancel()
+        timeout_threads[senderId] = threading.Timer(20.0, timeout_user, args=[senderId])
+        timeout_threads[senderId].start()
 
         # Handle the message based on the current state
         response_message = handle_message(senderId, message)
         res = sendMessage(senderId=senderId, message=response_message)
+
+        # Update last active time
+        session_context[senderId]["last_active"] = datetime.now()
 
         # Return a JSON response
         return jsonify({
@@ -42,6 +54,14 @@ def whatsapp():
             'status': 'error',
             'message': str(e)
         }), 500
+
+def timeout_user(senderId):
+    if senderId in session_context:
+        del session_context[senderId]
+    if senderId in timeout_threads:
+        del timeout_threads[senderId]
+    response_message = "Session timed out due to inactivity. Please start again by saying 'Hello'."
+    sendMessage(senderId=senderId, message=response_message)
 
 def handle_message(senderId, message):
     context = session_context[senderId]
@@ -96,14 +116,30 @@ def handle_message(senderId, message):
     elif context["state"] == "ordering_food":
         context["order"] = message
         context["state"] = "confirming_food_order"
-        return "Would you like anything to drink? Please type 'Yes' or 'No'."
+        return (
+            "Would you like anything to drink? Here are the available options:\n"
+            "1. Water\n"
+            "2. Soda\n"
+            "3. Juice\n"
+            "4. No drink\n\n"
+            "Please type the number of your choice."
+        )
 
     elif context["state"] == "confirming_food_order":
-        if message.lower() == "no":
+        drinks = {"1": "Water", "2": "Soda", "3": "Juice", "4": "No drink"}
+        if message in drinks:
+            context["drink"] = drinks[message]
             context["state"] = "food_order_confirmed"
             return "Your order is now being processed."
         else:
-            return "Please type 'No' if you don't want any drink."
+            return (
+                "Invalid option. Would you like anything to drink? Here are the available options:\n"
+                "1. Water\n"
+                "2. Soda\n"
+                "3. Juice\n"
+                "4. No drink\n\n"
+                "Please type the number of your choice."
+            )
 
     elif context["state"] == "requesting_amenities":
         context["amenities_request"] = message
