@@ -31,7 +31,7 @@ def whatsapp():
         # Reset the timeout timer
         if senderId in timeout_threads:
             timeout_threads[senderId].cancel()
-        timeout_threads[senderId] = threading.Timer(20.0, timeout_user, args=[senderId])
+        timeout_threads[senderId] = threading.Timer(200.0, timeout_user, args=[senderId])
         timeout_threads[senderId].start()
 
         # Handle the message based on the current state
