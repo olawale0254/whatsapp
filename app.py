@@ -16,7 +16,7 @@ timeout_threads = {}
 
 @app.route('/')
 def index():
-    return "Welcome!"
+    return "Welcome to Book Haven!"
 
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp():
@@ -68,88 +68,100 @@ def handle_message(senderId, message):
 
     if context["state"] == "initial":
         if message.lower() == "hello":
-            context["state"] = "awaiting_name_room"
-            return ("Welcome to The Curve at the Park, we are excited to have you stay with us! "
-                    "To check in Online, please share your full name and #Room number.")
+            context["state"] = "browsing_books"
+            return ("Welcome to Book Haven, your one-stop shop for the best books! "
+                    "To get started, type 'Browse' to see our categories or 'Search' to find a specific book.")
         else:
             return "Please start the conversation with 'Hello'."
 
-    elif context["state"] == "awaiting_name_room":
-        if "#" in message:
-            context["name"], context["room_number"] = message.split("#")
-            context["state"] = "checked_in"
+    elif context["state"] == "browsing_books":
+        if message.lower() == "browse":
+            context["state"] = "viewing_categories"
             return (
-                f"We see it's your first time staying with us, {context['name'].strip()}. Welcome again!\n\n"
-                "You are now checked in online and can enjoy our app services and hotel amenities.\n\n"
-                "Guests are welcome to enjoy the pool, café, and gym. For entertainment, we have a bar & restaurant on the 16th floor.\n\n"
-                "For Room Service, you can press 1 for the menu and order here.\n"
-                "For Room Amenities, you can press 2.\n"
-                "For Fixes and Repairs, you can press 3.\n\n"
-                "Enjoy your stay! And don't forget to rate our services for a better experience!"
+                "Here are our categories:\n"
+                "1. Fiction\n"
+                "2. Non-fiction\n"
+                "3. Science Fiction\n"
+                "4. Mystery\n"
+                "5. Children's Books\n\n"
+                "Please type the number of the category you want to explore."
+            )
+        elif message.lower() == "search":
+            context["state"] = "searching_books"
+            return "Please enter the title or author of the book you're looking for."
+        else:
+            return "Invalid option. Please type 'Browse' or 'Search'."
+
+    elif context["state"] == "viewing_categories":
+        categories = {"1": "Fiction", "2": "Non-fiction", "3": "Science Fiction", "4": "Mystery", "5": "Children's Books"}
+        if message in categories:
+            context["category"] = categories[message]
+            context["state"] = "selecting_books"
+            return (
+                f"Here are some popular books in the {context['category']} category:\n"
+                "1. Book A\n"
+                "2. Book B\n"
+                "3. Book C\n\n"
+                "Please type the number of the book you'd like to order, or type 'Back' to view categories again."
             )
         else:
-            return "Please provide your full name and room number in the format: Your Name #RoomNumber"
+            return "Invalid option. Please type the number of the category you want to explore."
 
-    elif context["state"] == "checked_in":
-        if message == "1":
-            context["state"] = "ordering_food"
+    elif context["state"] == "selecting_books":
+        if message.lower() == "back":
+            context["state"] = "browsing_books"
+            return ("Here are our categories:\n"
+                    "1. Fiction\n"
+                    "2. Non-fiction\n"
+                    "3. Science Fiction\n"
+                    "4. Mystery\n"
+                    "5. Children's Books\n\n"
+                    "Please type the number of the category you want to explore.")
+        elif message in ["1", "2", "3"]:
+            context["selected_book"] = f"Book {message}"
+            context["state"] = "confirming_order"
             return (
-                "The Curve Kitchen Menu:\n"
-                "1. Fried Fish - KSH 2,000 (Served with Ugali)\n"
-                "2. English Breakfast - KSH 1,000 (Extras available)\n"
-                "3. Pancakes - KSH 500 (served with fruits and syrup)\n\n"
-                "Please type your order."
+                f"You have selected {context['selected_book']}. Would you like to place the order? (Yes/No)"
             )
-        elif message == "2":
-            context["state"] = "requesting_amenities"
-            return (
-                "Our complimentary room amenities include:\n"
-                "Blow dryer, towels, soap, bottled water, toilet paper.\n\n"
-                "Please state the extra items required and our team will be happy to deliver!"
-            )
-        elif message == "3":
-            context["state"] = "reporting_issues"
-            return "Please describe the issue you are experiencing."
         else:
-            return "Invalid option. Please press 1 for Room Service, 2 for Room Amenities, or 3 for Fixes and Repairs."
+            return "Invalid option. Please type the number of the book you'd like to order, or type 'Back' to view categories again."
 
-    elif context["state"] == "ordering_food":
-        context["order"] = message
-        context["state"] = "confirming_food_order"
+    elif context["state"] == "confirming_order":
+        if message.lower() == "yes":
+            context["state"] = "order_placed"
+            return (
+                f"Your order for {context['selected_book']} has been placed successfully! "
+                "Thank you for shopping with Book Haven. Your book will be delivered soon."
+            )
+        elif message.lower() == "no":
+            context["state"] = "browsing_books"
+            return "Order canceled. Type 'Browse' to view categories or 'Search' to find a specific book."
+        else:
+            return "Please respond with 'Yes' or 'No'."
+
+    elif context["state"] == "searching_books":
+        context["search_query"] = message
+        context["state"] = "book_search_results"
         return (
-            "Would you like anything to drink? Here are the available options:\n"
-            "1. Water\n"
-            "2. Soda\n"
-            "3. Juice\n"
-            "4. No drink\n\n"
-            "Please type the number of your choice."
+            f"Search results for '{context['search_query']}':\n"
+            "1. Book X\n"
+            "2. Book Y\n"
+            "3. Book Z\n\n"
+            "Please type the number of the book you'd like to order, or type 'Back' to start a new search."
         )
 
-    elif context["state"] == "confirming_food_order":
-        drinks = {"1": "Water", "2": "Soda", "3": "Juice", "4": "No drink"}
-        if message in drinks:
-            context["drink"] = drinks[message]
-            context["state"] = "food_order_confirmed"
-            return "Your order is now being processed."
-        else:
+    elif context["state"] == "book_search_results":
+        if message.lower() == "back":
+            context["state"] = "searching_books"
+            return "Please enter the title or author of the book you're looking for."
+        elif message in ["1", "2", "3"]:
+            context["selected_book"] = f"Book {message}"
+            context["state"] = "confirming_order"
             return (
-                "Invalid option. Would you like anything to drink? Here are the available options:\n"
-                "1. Water\n"
-                "2. Soda\n"
-                "3. Juice\n"
-                "4. No drink\n\n"
-                "Please type the number of your choice."
+                f"You have selected {context['selected_book']}. Would you like to place the order? (Yes/No)"
             )
-
-    elif context["state"] == "requesting_amenities":
-        context["amenities_request"] = message
-        context["state"] = "amenities_requested"
-        return "Your request for extra amenities is being processed."
-
-    elif context["state"] == "reporting_issues":
-        context["issue"] = message
-        context["state"] = "issue_reported"
-        return "Your issue has been reported and our team will address it shortly."
+        else:
+            return "Invalid option. Please type the number of the book you'd like to order, or type 'Back' to start a new search."
 
     return "Something went wrong. Please try again."
 
