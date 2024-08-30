@@ -16,7 +16,7 @@ timeout_threads = {}
 
 @app.route('/')
 def index():
-    return "Welcome to The Curve at the Park chatbot service!"
+    return "Welcome!"
 
 @app.route('/whatsapp', methods=['POST'])
 def whatsapp():
